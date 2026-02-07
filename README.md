@@ -91,9 +91,9 @@ Automate with cron (every 15 minutes, keeping last 10k lines of log):
 
 ### Parked Away
 
-- Shows: `Q4 - 75% - High Street, Cambridge - 1430`.
-- Shows: `Q4 - 75% - yesterday` (if parked yesterday).
-- Shows: `Q4 - 75% - 3 days ago` (if older).
+- Shows: `Q4 - 75% - High Street, Cambridge - 1430` (parked today).
+- Shows: `Q4 - 75% - High Street, Cambridge - yesterday` (if parked yesterday).
+- Shows: `Q4 - 75% - High Street, Cambridge - 3 days ago` (if older).
 - Icon: Parking icon.
 - Duration: 30 seconds.
 
