@@ -27,13 +27,15 @@ def load_config(config_file: Path) -> dict:
 
     Expected format:
     {
-        "username": "your@email.com",
-        "password": "your_password",
-        "awtrix_ip": "192.168.1.x",
-        "vehicles": {
-            "VIN1": "Q4",
-            "VIN2": "GT"
-        }
+      "username": "your.email@example.com",
+      "password": "your_password",
+      "awtrix_ip": "192.168.1.x",
+      "vehicles": {
+        "WAUXXXXXXXXXXXXXX": "Q4",
+        "WAUXXXXXXXXXXXXXX": "Q6",
+        "WAUXXXXXXXXXXXXXX": "Q8",
+        "WAUXXXXXXXXXXXXXX": "GT"
+      }
     }
     """
     if not config_file.exists():
@@ -52,7 +54,7 @@ def soc_icon(pct: int) -> str:
 
 
 def soc_color(pct: int) -> str:
-    if pct > 40:
+    if pct >= 60:
         return "#00FF00"
     if pct > 20:
         return "#FFA500"
@@ -65,7 +67,7 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool):
         "text": f"{name} {soc}%",
         "icon": BATTERY_ICON_CHARGING if charging else soc_icon(soc),
         "color": soc_color(soc),
-        "progress": soc,
+        "progress": min(int(soc * 100 / 80), 100),
         "progressC": soc_color(soc),
         "progressBC": "#333333",
         "duration": 8,

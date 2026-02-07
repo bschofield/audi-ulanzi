@@ -13,7 +13,7 @@ This was thrown together using Claude.
 - Battery percentage display
 - Visual battery level icons / charging status
 - Color-coded battery levels (green / orange / red)
-- Progress bar showing charge level
+- Progress bar showing charge level (full = 80%)
 - Support for multiple vehicles
 - Automatic token management and refresh
 
@@ -139,14 +139,18 @@ Replace `/path/to/` with your actual paths.
 4. **Display Update**: Battery data is pushed to AWTRIX as a custom app with:
    - Vehicle name and percentage
    - Appropriate battery/charging icon
-   - Color-coded text and progress bar
+   - Color-coded text and progress bar (full = 80%)
    - 30-minute display lifetime
 
 ## Display Colors
 
-- 🟢 **Green** (>40%): Good charge level
-- 🟠 **Orange** (20-40%): Medium charge level
-- 🔴 **Red** (<20%): Low battery
+The display uses color-coded indicators to show battery status at a glance:
+
+- 🟢 **Green** (60% and above): Good charge level
+- 🟠 **Orange** (21%-59%): Medium charge level
+- 🔴 **Red** (20% and below): Low battery
+
+Note: The progress bar scales to show 80% charge as "full" (100% on the bar), which is a common charging target for battery longevity.
 
 ## Files
 
