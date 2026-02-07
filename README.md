@@ -78,6 +78,8 @@ This was thrown together using Claude.
      "awtrix_ip": "192.168.1.x",
      "vehicles": {
        "WAUXXXXXXXXXXXXXX": "Q4",
+       "WAUXXXXXXXXXXXXXX": "Q6",
+       "WAUXXXXXXXXXXXXXX": "Q8",
        "WAUXXXXXXXXXXXXXX": "GT"
      }
    }
