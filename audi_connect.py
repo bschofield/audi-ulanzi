@@ -37,6 +37,11 @@ USER_AGENT = "myAudi-Android/4.13.0 (Build 800238275.2210271555) Android/11"
 TOKEN_FILE = Path.home() / ".audi_tokens.json"
 
 
+def log(msg: str):
+    """Print message with timestamp prefix."""
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+
+
 def generate_code_verifier():
     """Generate PKCE code verifier."""
     return (
@@ -92,7 +97,7 @@ class AudiConnect:
                     )
                 return True
             except Exception as e:
-                print(f"Failed to load tokens: {e}")
+                log(f"Failed to load tokens: {e}")
         return False
 
     def _save_tokens(self):
@@ -121,7 +126,7 @@ class AudiConnect:
 
     async def login(self):
         """Perform full OAuth2 login flow."""
-        print("Starting login flow...")
+        log("Starting login flow...")
 
         # Try to load cached tokens first
         if self._load_tokens():
@@ -130,15 +135,15 @@ class AudiConnect:
                 and self.mbb_token_expiry
                 and datetime.now() < self.mbb_token_expiry
             ):
-                print("Using cached MBB token")
+                log("Using cached MBB token")
                 return True
             elif self.refresh_token:
-                print("Attempting token refresh...")
+                log("Attempting token refresh...")
                 try:
                     await self._refresh_tokens()
                     return True
                 except Exception as e:
-                    print(f"Refresh failed: {e}, doing full login")
+                    log(f"Refresh failed: {e}, doing full login")
 
         # Get OpenID configuration
         await self._get_openid_config()
@@ -169,7 +174,7 @@ class AudiConnect:
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
 
-        print(f"Fetching auth page...")
+        log("Fetching auth page...")
         async with self.session.get(
             auth_url, headers=headers, allow_redirects=False
         ) as resp:
@@ -187,8 +192,8 @@ class AudiConnect:
         # Look for form action and hidden fields
         action_match = re.search(r'<form[^>]+action="([^"]+)"', html)
         if not action_match:
-            print("DEBUG: Could not find form action")
-            print(f"HTML preview: {html[:2000]}")
+            log("DEBUG: Could not find form action")
+            log(f"HTML preview: {html[:2000]}")
             raise Exception("Could not find login form")
 
         form_action = action_match.group(1)
@@ -213,7 +218,7 @@ class AudiConnect:
         ):
             hidden_fields[match.group(2)] = match.group(1)
 
-        print(f"Found hidden fields: {list(hidden_fields.keys())}")
+        log(f"Found hidden fields: {list(hidden_fields.keys())}")
 
         # Step 2: Submit email
         email_data = {
@@ -221,23 +226,23 @@ class AudiConnect:
             "email": self.username,
         }
 
-        print(f"Submitting email to {form_action}...")
+        log(f"Submitting email to {form_action}...")
         async with self.session.post(
             form_action,
             data=email_data,
             headers={**headers, "Content-Type": "application/x-www-form-urlencoded"},
             allow_redirects=False,
         ) as resp:
-            print(f"Email response status: {resp.status}")
+            log(f"Email response status: {resp.status}")
             if resp.status in (302, 303):
                 location = resp.headers.get("Location")
-                print(f"Email redirect to: {location}")
+                log(f"Email redirect to: {location}")
                 if location.startswith("/"):
                     location = "https://identity.vwgroup.io" + location
             else:
                 html = await resp.text()
                 if resp.status != 200:
-                    print(f"Email response body: {html[:1000]}")
+                    log(f"Email response body: {html[:1000]}")
                 raise Exception(f"Email submission failed with status {resp.status}")
 
         # Extract relayState from redirect URL
@@ -248,7 +253,7 @@ class AudiConnect:
         if not relay_state:
             raise Exception(f"Could not extract relayState from: {location}")
 
-        print(f"Got relayState: {relay_state}")
+        log(f"Got relayState: {relay_state}")
 
         # Step 3: Submit password directly to authenticate endpoint
         # The authenticate endpoint expects POST with password
@@ -264,10 +269,10 @@ class AudiConnect:
 
         # GET the authenticate page to extract window._IDK data
         auth_page_url = f"https://identity.vwgroup.io/signin-service/v1/{CLIENT_ID}/login/authenticate?relayState={relay_state}&email={self.username}"
-        print(f"\nFetching authenticate page: {auth_page_url[:80]}...")
+        log(f"\nFetching authenticate page: {auth_page_url[:80]}...")
 
         async with self.session.get(auth_page_url, headers=headers) as resp:
-            print(f"Authenticate page status: {resp.status}")
+            log(f"Authenticate page status: {resp.status}")
             auth_html = await resp.text()
 
             # Extract window._IDK object which contains csrf_token and templateModel
@@ -279,7 +284,7 @@ class AudiConnect:
             csrf_match = re.search(r"csrf_token:\s*'([^']+)'", auth_html)
             if csrf_match:
                 new_csrf = csrf_match.group(1)
-                print(f"Found new CSRF token: {new_csrf[:50]}...")
+                log(f"Found new CSRF token: {new_csrf[:50]}...")
             else:
                 raise Exception("Could not find csrf_token in window._IDK")
 
@@ -287,7 +292,7 @@ class AudiConnect:
             hmac_match = re.search(r'"hmac"\s*:\s*"([^"]+)"', auth_html)
             if hmac_match:
                 new_hmac = hmac_match.group(1)
-                print(f"Found HMAC: {new_hmac[:50]}...")
+                log(f"Found HMAC: {new_hmac[:50]}...")
             else:
                 raise Exception("Could not find hmac in templateModel")
 
@@ -301,22 +306,22 @@ class AudiConnect:
             "hmac": new_hmac,
         }
 
-        print(f"\nSubmitting password to {auth_url}")
+        log(f"\nSubmitting password to {auth_url}")
         async with self.session.post(
             auth_url,
             data=password_data,
             headers={**headers, "Content-Type": "application/x-www-form-urlencoded"},
             allow_redirects=False,
         ) as resp:
-            print(f"Password response status: {resp.status}")
+            log(f"Password response status: {resp.status}")
             location = resp.headers.get("Location", "")
             if location:
                 if location.startswith("/"):
                     location = "https://identity.vwgroup.io" + location
-                print(f"Redirect: {location[:100]}...")
+                log(f"Redirect: {location[:100]}...")
             else:
                 text = await resp.text()
-                print(f"Response: {text[:500]}")
+                log(f"Response: {text[:500]}")
                 # Check for error in response
                 if "error" in text.lower() or resp.status >= 400:
                     raise Exception(f"Password submission failed: {resp.status}")
@@ -327,18 +332,18 @@ class AudiConnect:
         ):
             if location.startswith("/"):
                 location = "https://identity.vwgroup.io" + location
-            print(f"Following: {location[:80]}...")
+            log(f"Following: {location[:80]}...")
             async with self.session.get(
                 location, headers=headers, allow_redirects=False
             ) as r:
-                print(f"  Status: {r.status}")
+                log(f"  Status: {r.status}")
                 new_loc = r.headers.get("Location", "")
                 if new_loc:
-                    print(f"  Location: {new_loc[:100]}")
+                    log(f"  Location: {new_loc[:100]}")
 
                 # Handle consent/marketing page - need to POST to accept
                 if r.status == 200 and "consent/marketing" in location:
-                    print("  -> Marketing consent page, submitting acceptance...")
+                    log("  -> Marketing consent page, submitting acceptance...")
                     text = await r.text()
 
                     # Extract CSRF from page
@@ -370,15 +375,15 @@ class AudiConnect:
                         },
                         allow_redirects=False,
                     ) as consent_resp:
-                        print(f"  Consent POST status: {consent_resp.status}")
+                        log(f"  Consent POST status: {consent_resp.status}")
                         new_loc = consent_resp.headers.get("Location", "")
                         if new_loc:
-                            print(f"  Consent redirect: {new_loc[:100]}")
+                            log(f"  Consent redirect: {new_loc[:100]}")
                         else:
                             # If no redirect, try the callback URL directly
                             if callback_url:
                                 new_loc = callback_url
-                                print(f"  Using callback URL: {new_loc[:100]}")
+                                log(f"  Using callback URL: {new_loc[:100]}")
 
                 if not new_loc:
                     if r.status == 200:
@@ -389,7 +394,7 @@ class AudiConnect:
                         )
                         if match:
                             new_loc = match.group(1)
-                            print(f"  JS redirect: {new_loc[:100]}")
+                            log(f"  JS redirect: {new_loc[:100]}")
                     break
                 location = new_loc
 
@@ -407,7 +412,7 @@ class AudiConnect:
         if not code:
             raise Exception("Could not extract authorization code")
 
-        print(f"Got authorization code: {code[:20]}...")
+        log(f"Got authorization code: {code[:20]}...")
 
         # Step 4: Exchange code for tokens
         token_data = {
@@ -434,13 +439,13 @@ class AudiConnect:
             expires_in = tokens.get("expires_in", 3600)
             self.token_expiry = datetime.now() + timedelta(seconds=expires_in)
 
-        print("Got OAuth tokens, exchanging for MBB token...")
+        log("Got OAuth tokens, exchanging for MBB token...")
 
         # Step 5: Exchange for MBB OAuth token
         await self._get_mbb_token()
 
         self._save_tokens()
-        print("Login successful!")
+        log("Login successful!")
         return True
 
     async def _get_mbb_token(self):
@@ -530,7 +535,7 @@ async def main():
     async with AudiConnect(args.username, args.password) as audi:
         await audi.login()
 
-        print("\nGetting vehicles...")
+        log("\nGetting vehicles...")
         vehicles = await audi.get_vehicles()
         print(json.dumps(vehicles, indent=2))
 

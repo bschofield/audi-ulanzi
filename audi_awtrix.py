@@ -4,9 +4,10 @@
 import asyncio
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 import requests
-from audi_connect import AudiConnect
+from audi_connect import AudiConnect, log
 
 # Battery icon IDs (AWTRIX icon numbers)
 BATTERY_ICONS = [
@@ -245,7 +246,6 @@ async def main():
                     parking_data = await get_parking_position(audi, vin)
                     if parking_data is None:
                         # Car is driving - use current time
-                        from datetime import datetime
                         icon = BATTERY_ICON_DRIVING
                         time_suffix = datetime.now().strftime("%H%M")
                         location = time_suffix
@@ -264,7 +264,6 @@ async def main():
                             location = reverse_geocode(car_lat, car_lon)
 
                             # Get timestamp from parking data
-                            from datetime import datetime
                             parking_time_str = parking_data["data"]["carCapturedTimestamp"]
                             parking_time = datetime.fromisoformat(parking_time_str.replace('Z', '+00:00'))
 
@@ -289,10 +288,10 @@ async def main():
                             status_msg = f"at home, {status_msg}"
 
                 push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location, duration=duration)
-                print(f"{name}: {soc}% {status_msg} -> AWTRIX OK")
+                log(f"{name}: {soc}% {status_msg} -> AWTRIX OK")
 
             except Exception as e:
-                print(f"{name} ({vin}): ERROR - {e}", file=sys.stderr)
+                log(f"{name} ({vin}): ERROR - {e}")
                 sys.exit(1)
 
 
