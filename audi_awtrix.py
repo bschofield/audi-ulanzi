@@ -128,7 +128,7 @@ def reverse_geocode(lat: float, lon: float) -> str:
         return None
 
 
-def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None):
+def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = 8):
     """Push a custom app to AWTRIX."""
     # Determine icon: use provided icon, or default to charging/battery icons
     if icon is None:
@@ -146,7 +146,7 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
         "progress": min(int(soc * 100 / 80), 100),
         "progressC": soc_color(soc),
         "progressBC": "#333333",
-        "duration": 10,
+        "duration": duration,
         "textCase": 2,
         "lifetime": 1800,
     }
@@ -217,6 +217,7 @@ async def main():
                 # Get parking position to determine icon (only if home is configured)
                 icon = None
                 location = None
+                duration = 8  # Default for at home
                 status_msg = f"charging={is_charging}"
 
                 if home_lat is not None and home_lon is not None:
@@ -227,6 +228,7 @@ async def main():
                         icon = BATTERY_ICON_DRIVING
                         time_suffix = datetime.now().strftime("%H%M")
                         location = time_suffix
+                        duration = 20
                         status_msg = f"driving - {time_suffix}"
                     else:
                         # Car is parked, check if away from home
@@ -236,6 +238,7 @@ async def main():
 
                         if distance > 100:
                             icon = BATTERY_ICON_PARKED
+                            duration = 20
                             # Get location name for display
                             location = reverse_geocode(car_lat, car_lon)
 
@@ -254,7 +257,7 @@ async def main():
                         else:
                             status_msg = f"at home, {status_msg}"
 
-                push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location)
+                push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location, duration=duration)
                 print(f"{name}: {soc}% {status_msg} -> AWTRIX OK")
 
             except Exception as e:
