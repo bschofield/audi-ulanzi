@@ -195,8 +195,9 @@ def cache_geocode(lat: float, lon: float, location: str, cache_file: Optional[Pa
 
         conn.commit()
         conn.close()
-    except Exception:
-        pass  # Silently ignore cache errors
+        log(f"Cached location: {location} for ({lat_round}, {lon_round})")
+    except Exception as e:
+        log(f"Failed to cache geocode: {e}")
 
 
 def reverse_geocode(lat: float, lon: float, cache_file: Optional[Path] = None) -> Optional[str]:
@@ -208,6 +209,7 @@ def reverse_geocode(lat: float, lon: float, cache_file: Optional[Path] = None) -
     # Check cache first
     cached = get_cached_geocode(lat, lon, cache_file)
     if cached is not None:
+        log(f"Cache hit for ({lat:.4f}, {lon:.4f}): {cached}")
         return cached
 
     # Not in cache, fetch from API
