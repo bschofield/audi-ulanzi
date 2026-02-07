@@ -246,7 +246,17 @@ async def main():
                             from datetime import datetime
                             parking_time_str = parking_data["data"]["carCapturedTimestamp"]
                             parking_time = datetime.fromisoformat(parking_time_str.replace('Z', '+00:00'))
-                            time_suffix = parking_time.strftime("%H%M")
+
+                            # Format based on date
+                            now = datetime.now(parking_time.tzinfo)
+                            days_diff = (now.date() - parking_time.date()).days
+
+                            if days_diff == 0:
+                                time_suffix = parking_time.strftime("%H%M")
+                            elif days_diff == 1:
+                                time_suffix = "yesterday"
+                            else:
+                                time_suffix = f"{days_diff} days ago"
 
                             if location:
                                 location = f"{location} - {time_suffix}"
