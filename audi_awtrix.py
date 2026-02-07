@@ -4,6 +4,7 @@
 import asyncio
 import json
 import sys
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 import requests
@@ -39,6 +40,10 @@ HOME_DISTANCE_THRESHOLD = 100  # meters
 
 # Timeouts
 HTTP_TIMEOUT = 5  # seconds
+
+# Geocode cache
+GEOCODE_CACHE_PRECISION = 4  # Decimal places for lat/lon (4 = ~11m precision)
+GEOCODE_CACHE_MAX_ENTRIES = 10000  # Maximum cache entries (LRU eviction)
 
 # Color definitions
 COLOR_HIGH_SOC = "#00FF00"  # Green (>= 60%)
@@ -106,11 +111,105 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 
-def reverse_geocode(lat: float, lon: float) -> str:
+def init_geocode_cache(cache_file: Path):
+    """Initialize the geocode cache database."""
+    conn = sqlite3.connect(cache_file)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS geocode_cache (
+            lat REAL,
+            lon REAL,
+            location TEXT,
+            timestamp INTEGER,
+            PRIMARY KEY (lat, lon)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def get_cached_geocode(lat: float, lon: float, cache_file: Path | None) -> str | None:
+    """Get cached reverse geocode result if available. Updates timestamp for LRU."""
+    if cache_file is None:
+        return None
+
+    # Round coordinates for cache lookup
+    lat_round = round(lat, GEOCODE_CACHE_PRECISION)
+    lon_round = round(lon, GEOCODE_CACHE_PRECISION)
+
+    try:
+        conn = sqlite3.connect(cache_file)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT location FROM geocode_cache WHERE lat = ? AND lon = ?",
+            (lat_round, lon_round)
+        )
+        result = cursor.fetchone()
+
+        # Update timestamp on cache hit (LRU)
+        if result:
+            cursor.execute(
+                "UPDATE geocode_cache SET timestamp = ? WHERE lat = ? AND lon = ?",
+                (int(datetime.now().timestamp()), lat_round, lon_round)
+            )
+            conn.commit()
+
+        conn.close()
+        return result[0] if result else None
+    except Exception:
+        return None
+
+
+def cache_geocode(lat: float, lon: float, location: str, cache_file: Path | None):
+    """Cache a reverse geocode result with LRU eviction."""
+    if cache_file is None:
+        return
+
+    # Round coordinates for cache storage
+    lat_round = round(lat, GEOCODE_CACHE_PRECISION)
+    lon_round = round(lon, GEOCODE_CACHE_PRECISION)
+
+    try:
+        conn = sqlite3.connect(cache_file)
+        cursor = conn.cursor()
+
+        # Insert or update the entry
+        cursor.execute(
+            "INSERT OR REPLACE INTO geocode_cache (lat, lon, location, timestamp) VALUES (?, ?, ?, ?)",
+            (lat_round, lon_round, location, int(datetime.now().timestamp()))
+        )
+
+        # Check cache size and evict oldest entries if needed
+        cursor.execute("SELECT COUNT(*) FROM geocode_cache")
+        count = cursor.fetchone()[0]
+
+        if count > GEOCODE_CACHE_MAX_ENTRIES:
+            # Delete oldest entries to get back under the limit
+            entries_to_remove = count - GEOCODE_CACHE_MAX_ENTRIES
+            cursor.execute(
+                "DELETE FROM geocode_cache WHERE rowid IN "
+                "(SELECT rowid FROM geocode_cache ORDER BY timestamp ASC LIMIT ?)",
+                (entries_to_remove,)
+            )
+
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass  # Silently ignore cache errors
+
+
+def reverse_geocode(lat: float, lon: float, cache_file: Path | None = None) -> str:
     """Get location name from coordinates using Nominatim API.
 
     Returns formatted location as "Street Name, Town" or None if request fails.
+    Uses SQLite cache to reduce API calls if cache_file is provided.
     """
+    # Check cache first
+    cached = get_cached_geocode(lat, lon, cache_file)
+    if cached is not None:
+        return cached
+
+    # Not in cache, fetch from API
     try:
         url = "https://nominatim.openstreetmap.org/reverse"
         params = {
@@ -144,7 +243,13 @@ def reverse_geocode(lat: float, lon: float) -> str:
         if town:
             parts.append(town)
 
-        return ", ".join(parts) if parts else None
+        location = ", ".join(parts) if parts else None
+
+        # Cache the result if caching is enabled
+        if location:
+            cache_geocode(lat, lon, location, cache_file)
+
+        return location
     except Exception:
         return None
 
@@ -211,8 +316,13 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Push Audi SoC to AWTRIX 3")
-    parser.add_argument("--config", "-c", type=Path, help=f"Config file", required=True)
+    parser.add_argument("--config", "-c", type=Path, help="Config file", required=True)
+    parser.add_argument("--geocode-cache", "-g", type=Path, help="Geocode cache database file (optional)")
     args = parser.parse_args()
+
+    # Initialize geocode cache if specified
+    if args.geocode_cache:
+        init_geocode_cache(args.geocode_cache)
 
     # Load configuration
     config = load_config(args.config)
@@ -261,7 +371,7 @@ async def main():
                             icon = BATTERY_ICON_PARKED
                             duration = DURATION_AWAY
                             # Get location name for display
-                            location = reverse_geocode(car_lat, car_lon)
+                            location = reverse_geocode(car_lat, car_lon, args.geocode_cache)
 
                             # Get timestamp from parking data
                             parking_time_str = parking_data["data"]["carCapturedTimestamp"]

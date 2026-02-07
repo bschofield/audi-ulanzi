@@ -71,10 +71,16 @@ Run manually:
 python3 audi_awtrix.py -c config.json
 ```
 
+Run with geocode caching (recommended):
+
+```bash
+python3 audi_awtrix.py -c config.json -g ~/.audi_geocode_cache.db
+```
+
 Automate with cron (every 15 minutes, keeping last 10k lines of log):
 
 ```cron
-*/15 * * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json >> /tmp/audi_awtrix.log 2>&1; tail -10000 /tmp/audi_awtrix.log > /tmp/audi_awtrix.log.tmp && mv /tmp/audi_awtrix.log.tmp /tmp/audi_awtrix.log
+*/15 * * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json -g ~/.audi_geocode_cache.db >> /tmp/audi_awtrix.log 2>&1; tail -10000 /tmp/audi_awtrix.log > /tmp/audi_awtrix.log.tmp && mv /tmp/audi_awtrix.log.tmp /tmp/audi_awtrix.log
 ```
 
 ## Display Behavior
@@ -115,6 +121,11 @@ Edit the constants at the top of `audi_awtrix.py` to customize:
 **Display not updating**: Check AWTRIX IP, network connectivity, and downloaded icons.
 
 **Script errors**: Check `/tmp/audi_awtrix.log` and verify VINs in config.
+
+## Caching
+
+- **Authentication tokens**: Auto-cached in `~/.audi_tokens.json` to avoid repeated logins.
+- **Reverse geocoding**: Optional SQLite LRU cache (max 10k entries) for location lookups. Enable with `-g` / `--geocode-cache` option to reduce API calls to OpenStreetMap Nominatim. Coordinates are rounded to ~11m precision for cache hits. Least recently used entries are automatically evicted when the cache is full.
 
 ## Security
 
