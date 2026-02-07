@@ -8,6 +8,7 @@ from pathlib import Path
 import requests
 from audi_connect import AudiConnect
 
+# Battery icon IDs (AWTRIX icon numbers)
 BATTERY_ICONS = [
     (20, "6354"),
     (40, "6355"),
@@ -19,10 +20,28 @@ BATTERY_ICON_CHARGING = "21585"
 BATTERY_ICON_DRIVING = "1172"
 BATTERY_ICON_PARKED = "70271"
 
-# API constants
+# API endpoints and credentials
 STATUS_URL = "https://emea.bff.cariad.digital/vehicle/v1/vehicles/{vin}/selectivestatus?jobs=charging"
 PARKING_URL = "https://emea.bff.cariad.digital/vehicle/v1/vehicles/{vin}/parkingposition"
 X_CLIENT_ID = "77869e21-e30a-4a92-b016-48ab7d3db1d8"
+
+# Display configuration
+DURATION_AT_HOME = 10  # seconds
+DURATION_AWAY = 30  # seconds
+DISPLAY_LIFETIME = 1800  # seconds (30 minutes)
+PROGRESS_BAR_COLOR_BG = "#333333"
+SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
+
+# Distance thresholds
+HOME_DISTANCE_THRESHOLD = 100  # meters
+
+# Timeouts
+HTTP_TIMEOUT = 5  # seconds
+
+# Color definitions
+COLOR_HIGH_SOC = "#00FF00"  # Green (>= 60%)
+COLOR_MID_SOC = "#FFA500"  # Orange (21-59%)
+COLOR_LOW_SOC = "#FF0000"  # Red (<= 20%)
 
 
 def load_config(config_file: Path) -> dict:
@@ -62,10 +81,10 @@ def soc_icon(pct: int) -> str:
 
 def soc_color(pct: int) -> str:
     if pct >= 60:
-        return "#00FF00"
+        return COLOR_HIGH_SOC
     if pct > 20:
-        return "#FFA500"
-    return "#FF0000"
+        return COLOR_MID_SOC
+    return COLOR_LOW_SOC
 
 
 def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -101,7 +120,7 @@ def reverse_geocode(lat: float, lon: float) -> str:
         headers = {
             "User-Agent": "AudiAWTRIX/1.0"  # Nominatim requires a user agent
         }
-        resp = requests.get(url, params=params, headers=headers, timeout=5)
+        resp = requests.get(url, params=params, headers=headers, timeout=HTTP_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
 
@@ -128,7 +147,7 @@ def reverse_geocode(lat: float, lon: float) -> str:
         return None
 
 
-def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = 8):
+def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = DURATION_AT_HOME):
     """Push a custom app to AWTRIX."""
     # Determine icon: use provided icon, or default to charging/battery icons
     if icon is None:
@@ -143,14 +162,14 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
         "text": text,
         "icon": icon,
         "color": soc_color(soc),
-        "progress": min(int(soc * 100 / 80), 100),
+        "progress": min(int(soc * 100 / SOC_DISPLAY_MAX), 100),
         "progressC": soc_color(soc),
-        "progressBC": "#333333",
+        "progressBC": PROGRESS_BAR_COLOR_BG,
         "duration": duration,
-        "textCase": 2,
-        "lifetime": 1800,
+        "textCase": 0,
+        "lifetime": DISPLAY_LIFETIME,
     }
-    r = requests.post(f"{awtrix_url}?name={name.lower()}", json=payload, timeout=5)
+    r = requests.post(f"{awtrix_url}?name={name.lower()}", json=payload, timeout=HTTP_TIMEOUT)
     r.raise_for_status()
 
 
@@ -217,7 +236,7 @@ async def main():
                 # Get parking position to determine icon (only if home is configured)
                 icon = None
                 location = None
-                duration = 8  # Default for at home
+                duration = DURATION_AT_HOME
                 status_msg = f"charging={is_charging}"
 
                 if home_lat is not None and home_lon is not None:
@@ -228,7 +247,7 @@ async def main():
                         icon = BATTERY_ICON_DRIVING
                         time_suffix = datetime.now().strftime("%H%M")
                         location = time_suffix
-                        duration = 20
+                        duration = DURATION_AWAY
                         status_msg = f"driving - {time_suffix}"
                     else:
                         # Car is parked, check if away from home
@@ -236,9 +255,9 @@ async def main():
                         car_lon = parking_data["data"]["lon"]
                         distance = haversine_distance(home_lat, home_lon, car_lat, car_lon)
 
-                        if distance > 100:
+                        if distance > HOME_DISTANCE_THRESHOLD:
                             icon = BATTERY_ICON_PARKED
-                            duration = 20
+                            duration = DURATION_AWAY
                             # Get location name for display
                             location = reverse_geocode(car_lat, car_lon)
 
