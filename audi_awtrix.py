@@ -29,6 +29,7 @@ X_CLIENT_ID = "77869e21-e30a-4a92-b016-48ab7d3db1d8"
 DURATION_AT_HOME = 10  # seconds
 DURATION_AWAY = 30  # seconds
 DISPLAY_LIFETIME = 1800  # seconds (30 minutes)
+DISPLAY_TEXT_CASE = 2  # AWTRIX text case (0=global setting, 1=uppercase, 2=as sent)
 PROGRESS_BAR_COLOR_BG = "#333333"
 SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
 
@@ -167,7 +168,7 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
         "progressC": soc_color(soc),
         "progressBC": PROGRESS_BAR_COLOR_BG,
         "duration": duration,
-        "textCase": 0,
+        "textCase": DISPLAY_TEXT_CASE,
         "lifetime": DISPLAY_LIFETIME,
     }
     r = requests.post(f"{awtrix_url}?name={name.lower()}", json=payload, timeout=HTTP_TIMEOUT)
