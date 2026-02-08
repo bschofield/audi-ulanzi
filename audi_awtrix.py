@@ -267,7 +267,11 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
     if location:
         text = f"{name} - {soc}% - {location}"
     else:
-        text = f"{name} {soc}%"
+        text = f"{name} {soc}"
+
+        # Add % unless it will cause a scroll
+        if len(text) != 6:
+            text += "%"
 
     payload = {
         "text": text,
@@ -376,11 +380,12 @@ async def main():
                             # Get location name for display
                             location = reverse_geocode(car_lat, car_lon, args.geocode_cache)
 
-                            # Get timestamp from parking data
+                            # Get timestamp from parking data (API returns UTC)
                             parking_time_str = parking_data["data"]["carCapturedTimestamp"]
-                            parking_time = datetime.fromisoformat(parking_time_str.replace('Z', '+00:00'))
+                            parking_time_utc = datetime.fromisoformat(parking_time_str.replace('Z', '+00:00'))
+                            parking_time = parking_time_utc.astimezone()
 
-                            # Format based on date
+                            # Format based on date (in local time)
                             now = datetime.now(parking_time.tzinfo)
                             days_diff = (now.date() - parking_time.date()).days
 

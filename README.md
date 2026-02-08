@@ -74,13 +74,13 @@ python3 audi_awtrix.py -c config.json
 Run with geocode caching (recommended):
 
 ```bash
-python3 audi_awtrix.py -c config.json -g ~/.audi_geocode_cache.db
+python3 audi_awtrix.py -c config.json -g geocode.sqlite3
 ```
 
 Automate with cron (every 15 minutes, keeping last 10k lines of log):
 
 ```cron
-*/15 * * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json -g ~/.audi_geocode_cache.db >> /tmp/audi_awtrix.log 2>&1; tail -10000 /tmp/audi_awtrix.log > /tmp/audi_awtrix.log.tmp && mv /tmp/audi_awtrix.log.tmp /tmp/audi_awtrix.log
+*/15 * * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json -g /path/to/geocode.sqlite3 >> /tmp/audi_awtrix.log 2>&1; tail -10000 /tmp/audi_awtrix.log > /tmp/audi_awtrix.log.tmp && mv /tmp/audi_awtrix.log.tmp /tmp/audi_awtrix.log
 ```
 
 ## Display Behavior
