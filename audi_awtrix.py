@@ -31,7 +31,7 @@ X_CLIENT_ID = "77869e21-e30a-4a92-b016-48ab7d3db1d8"
 # Display configuration
 DURATION_AT_HOME = 8 # seconds
 DURATION_AWAY = 30  # seconds
-DISPLAY_LIFETIME = 1800  # seconds (30 minutes)
+DISPLAY_LIFETIME = 900  # seconds (15 minutes)
 DISPLAY_TEXT_CASE = 2  # AWTRIX text case (0=global setting, 1=uppercase, 2=as sent)
 PROGRESS_BAR_COLOR_BG = "#333333"
 SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
