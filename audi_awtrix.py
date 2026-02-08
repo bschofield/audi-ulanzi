@@ -286,6 +286,7 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
     }
     r = requests.post(f"{awtrix_url}?name={name.lower()}", json=payload, timeout=HTTP_TIMEOUT)
     r.raise_for_status()
+    return text
 
 
 async def get_soc(audi, vin: str) -> dict:
@@ -357,7 +358,7 @@ async def main():
                 icon = None
                 location = None
                 duration = DURATION_AT_HOME
-                status_msg = f"charging={is_charging}"
+                status_msg = "charging" if is_charging else "not charging"
 
                 if home_lat is not None and home_lon is not None:
                     parking_data = await get_parking_position(audi, vin)
@@ -405,8 +406,8 @@ async def main():
                         else:
                             status_msg = f"at home, {status_msg}"
 
-                push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location, duration=duration)
-                log(f"{name}: {soc}% {status_msg} -> AWTRIX OK")
+                display_text = push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location, duration=duration)
+                log(f"{name}: {soc}% {status_msg} -> \"{display_text}\"")
 
             except Exception as e:
                 log(f"{name} ({vin}): ERROR - {e}")
