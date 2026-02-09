@@ -40,8 +40,9 @@ SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
 # Distance thresholds
 HOME_DISTANCE_THRESHOLD = 100  # meters
 
-# Timeouts
-HTTP_TIMEOUT = 5  # seconds
+# Timeouts and retries
+HTTP_TIMEOUT = 10  # seconds
+AWTRIX_RETRIES = 3
 
 # Geocode cache
 GEOCODE_CACHE_PRECISION = 4  # Decimal places for lat/lon (4 = ~11m precision)
@@ -285,9 +286,17 @@ def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = N
         "textCase": DISPLAY_TEXT_CASE,
         "lifetime": DISPLAY_LIFETIME,
     }
-    r = requests.post(f"{awtrix_url}?name={name.lower()}", json=payload, timeout=HTTP_TIMEOUT)
-    r.raise_for_status()
-    return text
+    url = f"{awtrix_url}?name={name.lower()}"
+    for attempt in range(1, AWTRIX_RETRIES + 1):
+        try:
+            r = requests.post(url, json=payload, timeout=HTTP_TIMEOUT)
+            r.raise_for_status()
+            return text
+        except requests.exceptions.RequestException as e:
+            if attempt < AWTRIX_RETRIES:
+                log.warning(f"AWTRIX push attempt {attempt}/{AWTRIX_RETRIES} failed: {e}")
+            else:
+                raise
 
 
 async def get_soc(audi, vin: str) -> dict:
