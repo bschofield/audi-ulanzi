@@ -20,6 +20,7 @@ import hashlib
 import base64
 import secrets
 import re
+from html.parser import HTMLParser
 from urllib.parse import urlencode, urlparse, parse_qs
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -40,6 +41,7 @@ TOKEN_FILE = Path.home() / ".audi_tokens.json"
 def log(msg: str):
     """Print message with timestamp prefix."""
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+
 
 
 def generate_code_verifier():
@@ -188,35 +190,29 @@ class AudiConnect:
             else:
                 html = await resp.text()
 
-        # Parse form data from HTML
-        # Look for form action and hidden fields
-        action_match = re.search(r'<form[^>]+action="([^"]+)"', html)
-        if not action_match:
-            log("DEBUG: Could not find form action")
+        # Parse form action and hidden fields from HTML
+        parser = HTMLParser()
+        form_action = None
+        hidden_fields = {}
+        def handle_starttag(tag, attrs):
+            nonlocal form_action
+            attrs = dict(attrs)
+            if tag == "form" and form_action is None:
+                form_action = attrs.get("action")
+            if tag == "input" and attrs.get("type") == "hidden":
+                name = attrs.get("name")
+                if name:
+                    hidden_fields[name] = attrs.get("value", "")
+        parser.handle_starttag = handle_starttag
+        parser.feed(html)
+
+        if not form_action:
             log(f"HTML preview: {html[:2000]}")
             raise Exception("Could not find login form")
-
-        form_action = action_match.group(1)
 
         # Make relative URLs absolute
         if form_action.startswith("/"):
             form_action = "https://identity.vwgroup.io" + form_action
-
-        # Extract hidden fields
-        hidden_fields = {}
-        for match in re.finditer(
-            r'<input[^>]+type="hidden"[^>]+name="([^"]+)"[^>]+value="([^"]*)"', html
-        ):
-            hidden_fields[match.group(1)] = match.group(2)
-        # Also try alternate order
-        for match in re.finditer(
-            r'<input[^>]+name="([^"]+)"[^>]+type="hidden"[^>]+value="([^"]*)"', html
-        ):
-            hidden_fields[match.group(1)] = match.group(2)
-        for match in re.finditer(
-            r'<input[^>]+value="([^"]*)"[^>]+type="hidden"[^>]+name="([^"]+)"', html
-        ):
-            hidden_fields[match.group(2)] = match.group(1)
 
         log(f"Found hidden fields: {list(hidden_fields.keys())}")
 
