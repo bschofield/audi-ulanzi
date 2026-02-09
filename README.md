@@ -77,10 +77,10 @@ Run with geocode caching (recommended):
 python3 audi_awtrix.py -c config.json -g geocode.sqlite3
 ```
 
-Automate with cron (every 30 minutes between 08:00–10:00, 18:00-22:00):
+Automate with cron (every 15 minutes between 08:30–23:45):
 
 ```cron
-*/30 8-10,18-22 * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json -g /path/to/geocode.sqlite3 >> /path/to/audi_awtrix.log 2>&1
+*/15 8-23 * * * /usr/bin/python3 /path/to/audi_awtrix.py -c /path/to/config.json -g /path/to/geocode.sqlite3 >> /path/to/audi_awtrix.log 2>&1
 ```
 
 ## Display Behavior
