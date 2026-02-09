@@ -29,9 +29,10 @@ PARKING_URL = "https://emea.bff.cariad.digital/vehicle/v1/vehicles/{vin}/parking
 X_CLIENT_ID = "77869e21-e30a-4a92-b016-48ab7d3db1d8"
 
 # Display configuration
-DURATION_AT_HOME = 8 # seconds
-DURATION_AWAY = 30  # seconds
-DISPLAY_LIFETIME = 900  # seconds (15 minutes)
+DURATION_HOME = 8 # seconds
+DURATION_DRIVING = 8 # seconds
+DURATION_PARKED = 16  # seconds
+DISPLAY_LIFETIME = 1800  # seconds (30 minutes)
 DISPLAY_TEXT_CASE = 2  # AWTRIX text case (0=global setting, 1=uppercase, 2=as sent)
 PROGRESS_BAR_COLOR_BG = "#333333"
 SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
@@ -257,7 +258,7 @@ def reverse_geocode(lat: float, lon: float, cache_file: Optional[Path] = None) -
         return None
 
 
-def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = DURATION_AT_HOME):
+def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = DURATION_HOME):
     """Push a custom app to AWTRIX."""
     # Determine icon: use provided icon, or default to charging/battery icons
     if icon is None:
@@ -357,7 +358,7 @@ async def main():
                 # Get parking position to determine icon (only if home is configured)
                 icon = None
                 location = None
-                duration = DURATION_AT_HOME
+                duration = DURATION_HOME
                 status_msg = "charging" if is_charging else "not charging"
 
                 if home_lat is not None and home_lon is not None:
@@ -367,7 +368,7 @@ async def main():
                         icon = BATTERY_ICON_DRIVING
                         time_suffix = datetime.now().strftime("%H%M")
                         location = time_suffix
-                        duration = DURATION_AWAY
+                        duration = DURATION_DRIVING
                         status_msg = f"driving - {time_suffix}"
                     else:
                         # Car is parked, check if away from home
@@ -377,7 +378,7 @@ async def main():
 
                         if distance > HOME_DISTANCE_THRESHOLD:
                             icon = BATTERY_ICON_PARKED
-                            duration = DURATION_AWAY
+                            duration = DURATION_PARKED
                             # Get location name for display
                             location = reverse_geocode(car_lat, car_lon, args.geocode_cache)
 
