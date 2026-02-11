@@ -22,6 +22,7 @@ BATTERY_ICON_FULL = "6358"
 BATTERY_ICON_CHARGING = "21585"
 BATTERY_ICON_DRIVING = "1172"
 BATTERY_ICON_PARKED = "70271"
+BATTERY_ICON_ERROR = "33180"
 
 # API endpoints
 STATUS_URL = "https://emea.bff.cariad.digital/vehicle/v1/vehicles/{vin}/selectivestatus?jobs=charging"
@@ -258,11 +259,15 @@ def reverse_geocode(lat: float, lon: float, cache_file: Optional[Path] = None) -
         return None
 
 
-def push_app(awtrix_url: str, name: str, soc: int, charging: bool, icon: str = None, location: str = None, duration: int = DURATION_HOME):
+def push_app(awtrix_url: str, name: str, soc: int, charging_state: str, icon: str = None, location: str = None, duration: int = DURATION_HOME):
     """Push a custom app to AWTRIX."""
-    # Determine icon: use provided icon, or default to charging/battery icons
-    if icon is None:
-        icon = BATTERY_ICON_CHARGING if charging else soc_icon(soc)
+    # Determine icon: charging/error override location-based icons
+    if charging_state == "charging":
+        icon = BATTERY_ICON_CHARGING
+    elif charging_state == "error":
+        icon = BATTERY_ICON_ERROR
+    elif icon is None:
+        icon = soc_icon(soc)
 
     # Format text with optional location
     if location:
@@ -346,17 +351,11 @@ async def main():
                 soc = battery_status["currentSOC_pct"]
                 charging_state = charging_status["chargingState"]
                 log(f"{name}: SoC={soc}% state={charging_state} batteryTs={battery_status['carCapturedTimestamp']} chargingTs={charging_status['carCapturedTimestamp']}")
-                is_charging = charging_state not in (
-                    "notReadyForCharging",
-                    "readyForCharging",
-                    "off",
-                )
-
                 # Get parking position to determine icon (only if home is configured)
                 icon = None
                 location = None
                 duration = DURATION_HOME
-                status_msg = "charging" if is_charging else "not charging"
+                status_msg = charging_state
 
                 if home_lat is not None and home_lon is not None:
                     parking_data = await get_parking_position(audi, vin)
@@ -406,7 +405,7 @@ async def main():
                         else:
                             status_msg = f"at home, {status_msg}"
 
-                display_text = push_app(awtrix_url, name, soc, is_charging, icon=icon, location=location, duration=duration)
+                display_text = push_app(awtrix_url, name, soc, charging_state, icon=icon, location=location, duration=duration)
                 log(f"{name}: {soc}% {status_msg} -> \"{display_text}\"")
 
             except Exception as e:

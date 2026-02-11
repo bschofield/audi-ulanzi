@@ -31,6 +31,7 @@ Display your Audi EV battery status on an AWTRIX 3 display (Ulanzi TC001) with l
    - **Charging**: 21585
    - **Driving**: 1172
    - **Parked**: 70271
+   - **Error**: 33180
 
 3. (Optional) Disable default AWTRIX apps:
    ```bash
@@ -90,13 +91,13 @@ Messages have a 15-minute lifetime and disappear from the display if not refresh
 ### At Home
 
 - Shows: `Q4 75%`.
-- Icon: Battery level or charging icon.
+- Icon: Battery level icon (charging icon if charging, error icon if error state).
 - Duration: 8 seconds.
 
 ### Driving
 
 - Shows: `Q4 - 75% - 1430` (current time).
-- Icon: Car icon.
+- Icon: Car icon (charging icon if charging, error icon if error state).
 - Duration: 8 seconds.
 
 ### Parked Away
@@ -104,7 +105,7 @@ Messages have a 15-minute lifetime and disappear from the display if not refresh
 - Shows: `Q4 - 75% - High Street, Cambridge - 1430` (parked today).
 - Shows: `Q4 - 75% - High Street, Cambridge - yesterday` (if parked yesterday).
 - Shows: `Q4 - 75% - High Street, Cambridge - 3 days ago` (if older).
-- Icon: Parking icon.
+- Icon: Parking icon (charging icon if charging, error icon if error state).
 - Duration: 16 seconds.
 
 ## Configuration Constants
