@@ -414,7 +414,8 @@ async def main():
 
             except Exception as e:
                 log(f"{name} ({vin}): ERROR - {e}")
-                push_app(awtrix_url, name, 0, "error", location="CONNECTION ERROR")
+                display_text = push_app(awtrix_url, name, 0, "error", location="CONNECTION ERROR")
+                log(f"{name}: error -> \"{display_text}\"")
 
 
 if __name__ == "__main__":
