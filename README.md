@@ -100,6 +100,12 @@ Messages have a 15-minute lifetime and disappear from the display if not refresh
 - Icon: Car icon (charging icon if charging, error icon if error state).
 - Duration: 8 seconds.
 
+### Connection Error
+
+- Shows: `Q4 - CONNECTION ERROR`.
+- Icon: Error icon.
+- Duration: 8 seconds.
+
 ### Parked Away
 
 - Shows: `Q4 - 75% - High Street, Cambridge - 1430` (parked today).

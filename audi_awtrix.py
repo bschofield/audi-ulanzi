@@ -3,7 +3,6 @@
 
 import asyncio
 import json
-import sys
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -270,7 +269,9 @@ def push_app(awtrix_url: str, name: str, soc: int, charging_state: str, icon: st
         icon = soc_icon(soc)
 
     # Format text with optional location
-    if location:
+    if charging_state == "error":
+        text = f"{name} - {location or 'ERROR'}"
+    elif location:
         text = f"{name} - {soc}% - {location}"
     else:
         text = f"{name} {soc}"
@@ -282,14 +283,17 @@ def push_app(awtrix_url: str, name: str, soc: int, charging_state: str, icon: st
     payload = {
         "text": text,
         "icon": icon,
-        "color": soc_color(soc),
-        "progress": min(int(soc * 100 / SOC_DISPLAY_MAX), 100),
-        "progressC": soc_color(soc),
-        "progressBC": PROGRESS_BAR_COLOR_BG,
         "duration": duration,
         "textCase": DISPLAY_TEXT_CASE,
         "lifetime": DISPLAY_LIFETIME,
     }
+    if charging_state != "error":
+        payload.update({
+            "color": soc_color(soc),
+            "progress": min(int(soc * 100 / SOC_DISPLAY_MAX), 100),
+            "progressC": soc_color(soc),
+            "progressBC": PROGRESS_BAR_COLOR_BG,
+        })
     url = f"{awtrix_url}?name={name.lower()}"
     for attempt in range(1, AWTRIX_RETRIES + 1):
         try:
@@ -410,7 +414,7 @@ async def main():
 
             except Exception as e:
                 log(f"{name} ({vin}): ERROR - {e}")
-                sys.exit(1)
+                push_app(awtrix_url, name, 0, "error", location="CONNECTION ERROR")
 
 
 if __name__ == "__main__":
