@@ -37,7 +37,7 @@ PROGRESS_BAR_COLOR_BG = "#333333"
 SOC_DISPLAY_MAX = 80  # Show 100% progress bar at 80% SoC
 
 # Distance thresholds
-HOME_DISTANCE_THRESHOLD = 10  # meters
+HOME_DISTANCE_THRESHOLD = 25  # meters
 
 # Timeouts and retries
 HTTP_TIMEOUT = 10  # seconds

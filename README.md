@@ -119,7 +119,7 @@ Messages have a 15-minute lifetime and disappear from the display if not refresh
 Edit the constants at the top of `audi_awtrix.py` to customize:
 
 - `DURATION_HOME` / `DURATION_DRIVING` / `DURATION_PARKED`: Display durations.
-- `HOME_DISTANCE_THRESHOLD`: Distance in meters to consider "at home" (default: 100m).
+- `HOME_DISTANCE_THRESHOLD`: Distance in meters to consider "at home" (default: 25m).
 - `COLOR_HIGH_SOC` / `COLOR_MID_SOC` / `COLOR_LOW_SOC`: Status colors.
 - `SOC_DISPLAY_MAX`: SoC percentage to show as "full" on progress bar (default: 80%).
 
